@@ -6,61 +6,53 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 #ifndef MAX_BUF
 #define MAX_BUF 1024
 #endif
 
-
 // check if directory is a leaf
-int checkIsLeaf(DIR *pDir, struct dirent *pEntry, struct stat *pStats)
+int checkIsLeaf(DIR *pDir, struct dirent *pEntry)
 {
 	rewinddir(pDir);
 
-	readdir(pDir); // ..
-	readdir(pDir); // .
-
-	while ((pEntry = readdir(pDir)) != NULL) {
-		if (S_ISDIR(pStats->st_mode)) 
+	while ((pEntry = readdir(pDir)) != NULL) 
+	{
+		if (pEntry->d_type == DT_DIR && strcmp(pEntry->d_name, ".") != 0 && strcmp(pEntry->d_name, "..") != 0) 
 			return 0;
 	}
 	
 	return 1;
 }
 
-int execOnChildren(DIR *pDir, struct dirent *pEntry, struct stat *pStats, const char *testCasePath) 
+int execOnChildren(DIR *pDir, struct dirent *pEntry) 
 {
 	rewinddir(pDir);
-
-	readdir(pDir); // ..
-	readdir(pDir); // .
 
 	pid_t pid[MAX_BUF];
 	int status[MAX_BUF];
 	int i= -1;
 
-	char *subDirPath = (char *) malloc(sizeof(char *) * MAX_BUF);
-	char *curDir = (char *) malloc(sizeof(char *) * MAX_BUF);
-	char *agPath = (char *) malloc(sizeof(char *) * MAX_BUF);
+	char *cwd = (char *) malloc(sizeof(char *) * MAX_BUF);
 
-	getcwd(curDir, MAX_BUF);
-	sprintf(agPath, "%s/%s", curDir, "Aggregate_Votes");
-
-	while ((pEntry = readdir(pDir)) != NULL) {
-		if (S_ISDIR(pStats->st_mode)) {
-			sprintf(subDirPath, "%s/%s", testCasePath, pEntry->d_name);
-			if (chdir(subDirPath)) {
-				perror(subDirPath);
+	while ((pEntry = readdir(pDir)) != NULL) 
+	{
+		if (pEntry->d_type == DT_DIR && strcmp(pEntry->d_name, ".") != 0 && strcmp(pEntry->d_name, "..") != 0) 
+		{
+			if (chdir(pEntry->d_name)) 
+			{
+				perror(pEntry->d_name);
 				return 1;
 			}
 
 			pid[++i] = fork();
 
 			if (pid[i] == 0) { // child
-				execl(agPath, "./Aggregate_Votes", subDirPath, (char *) NULL);
+				chdir("..");
+				execlp("Aggregate_Votes", "Aggregate_Votes", pEntry->d_name, (char *) NULL);
 			} else if (pid[i] > 0) { // parent waits
 				waitpid(pid[i], &status[i], 0);
-				printf("Child: %d\nStatus: %d\nSubdirectory: %s\n\n", pid[i], status[i], subDirPath);
 			} else { // error
 				perror("Fork error");
 				return 1;
@@ -70,18 +62,18 @@ int execOnChildren(DIR *pDir, struct dirent *pEntry, struct stat *pStats, const 
 		}
 	}
 
-	return 1;
-}
+	free(cwd);
 
+	return 0;
+}
 
 int main(int argc, char const *argv[])
 {
-	if (argc != 2) {
+	if (argc != 2) 
+	{
 		printf("Incorrect number of arguments, Expected 1 but %d entered\n", argc - 1);
-		return 0;
+		return 1;
 	}
-
-	execlp("cat", "hello", (char *) NULL);
 
 	struct stat stats;
 	struct dirent entry;
@@ -90,27 +82,42 @@ int main(int argc, char const *argv[])
 	struct dirent *pEntry = &entry;
 	struct stat *pStats = &stats;
 
-	if (pDir== NULL) { 
-		char *curDir = (char *) malloc(sizeof(char *) * MAX_BUF);
-		getcwd(curDir, MAX_BUF);
 
-		printf("%s\n", curDir);
-		perror("Directory error");
+
+	if (pDir== NULL) 
+	{
+		char *argDir = (char *) malloc(sizeof(char *) * MAX_BUF);
+		getcwd(argDir, MAX_BUF);
+
+		perror(argDir);
 		return 1;
 	}
 
-	if (stat(argv[1], pStats) == -1) {
+	if (stat(argv[1], pStats) == -1) 
+	{
 		perror("Stats error");
 		return 1;
 	}
 
-	// check if this is a leaf dir
-	if (checkIsLeaf(pDir, pEntry, pStats)) {
-		closedir(pDir);
-		execl("./Leaf_Counter", "./Leaf_Counter", argv[1], (char *) NULL);
+	if (chdir(argv[1])) 
+	{
+		printf("3\n");
+		perror(pEntry->d_name);
+		return 1;
 	}
 
-	execOnChildren(pDir, pEntry, pStats, argv[1]);
+	if (checkIsLeaf(pDir, pEntry)) 
+	{
+		printf("Leaf: %s\n", argv[1]);
+		closedir(pDir);
+		// execlp("Leaf_Counter", "Leaf_Counter", argv[1], (char *) NULL);
+		return 0;
+	}
+
+	execOnChildren(pDir, pEntry);
+
+	// Execute vote counter on outputs of Leaf_Counter
+	printf("--- %s is done ---\n", argv[1]);
 
 	closedir(pDir);
 
