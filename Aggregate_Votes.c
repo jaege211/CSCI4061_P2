@@ -26,6 +26,7 @@ int checkIsLeaf(DIR *pDir, struct dirent *pEntry)
 	return 1;
 }
 
+// call Aggregate_Votes on all child directories
 int execOnChildren(DIR *pDir, struct dirent *pEntry) 
 {
 	rewinddir(pDir);
@@ -51,8 +52,9 @@ int execOnChildren(DIR *pDir, struct dirent *pEntry)
 			if (pid[i] == 0) { // child
 				chdir("..");
 				execlp("Aggregate_Votes", "Aggregate_Votes", pEntry->d_name, (char *) NULL);
-			} else if (pid[i] > 0) { // parent waits
+			} else if (pid[i] > 0) { // parent
 				waitpid(pid[i], &status[i], 0);
+				close(pid[i]);
 			} else { // error
 				perror("Fork error");
 				return 1;
@@ -82,9 +84,7 @@ int main(int argc, char const *argv[])
 	struct dirent *pEntry = &entry;
 	struct stat *pStats = &stats;
 
-
-
-	if (pDir== NULL) 
+	if (pDir== NULL) // check if there is an error opening the directory
 	{
 		char *argDir = (char *) malloc(sizeof(char *) * MAX_BUF);
 		getcwd(argDir, MAX_BUF);
@@ -93,20 +93,19 @@ int main(int argc, char const *argv[])
 		return 1;
 	}
 
-	if (stat(argv[1], pStats) == -1) 
+	if (stat(argv[1], pStats) == -1) // check if there is an error opening stats
 	{
-		perror("Stats error");
+		perror(argv[1]);
 		return 1;
 	}
 
-	if (chdir(argv[1])) 
+	if (chdir(argv[1])) // check if there is an error changing directories
 	{
-		printf("3\n");
 		perror(pEntry->d_name);
 		return 1;
 	}
 
-	if (checkIsLeaf(pDir, pEntry)) 
+	if (checkIsLeaf(pDir, pEntry)) // execute leaf_counter if the directory is a leaf
 	{
 		printf("Leaf: %s\n", argv[1]);
 		closedir(pDir);
