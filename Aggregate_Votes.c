@@ -86,10 +86,7 @@ int main(int argc, char const *argv[])
 
 	if (pDir== NULL) // check if there is an error opening the directory
 	{
-		char *argDir = (char *) malloc(sizeof(char *) * MAX_BUF);
-		getcwd(argDir, MAX_BUF);
-
-		perror(argDir);
+		perror(argv[1]);
 		return 1;
 	}
 
@@ -107,9 +104,13 @@ int main(int argc, char const *argv[])
 
 	if (checkIsLeaf(pDir, pEntry)) // execute leaf_counter if the directory is a leaf
 	{
-		printf("Leaf: %s\n", argv[1]);
+		chdir("..");
+		char cwd[MAX_BUF];
+		getcwd(cwd, MAX_BUF);
+		printf("%s\n", cwd);
+		printf("Passing %s to Leaf_Counter\n", argv[1]);
 		closedir(pDir);
-		// execlp("Leaf_Counter", "Leaf_Counter", argv[1], (char *) NULL);
+		execlp("Leaf_Counter", "Leaf_Counter", argv[1], (char *) NULL);
 		return 0;
 	}
 
@@ -117,6 +118,8 @@ int main(int argc, char const *argv[])
 
 	// Execute vote counter on outputs of Leaf_Counter
 	printf("--- %s is done ---\n", argv[1]);
+
+
 
 	closedir(pDir);
 

@@ -23,7 +23,12 @@ int parseInput(char* pathname) {
 	strcpy(path,pathname);
 	strcat(path, "/votes.txt");
 
-	f = fopen(path, "rb");
+	f = fopen("./votes", "rb");
+
+	if (f != NULL)
+	{
+		printf("valid\n");
+	}
 
 	if (f != NULL) {
 		while ((c = fgetc(f))) {
@@ -42,7 +47,6 @@ int parseInput(char* pathname) {
 
 	snprintf(test, sizeof(test)*4, "%s%s%s", "/", base, ".txt");
 	strcat(path, test);
-	printf("%s\n", path);
 
 	f = fopen(path, "w+");
 
