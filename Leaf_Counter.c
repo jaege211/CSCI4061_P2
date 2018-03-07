@@ -10,57 +10,78 @@
 #include <sys/stat.h>
 #include "util.h"
 
-int parseInput(char* pathname) {
-	FILE* f, *o;
-	char* path = malloc(strlen(pathname) + 256);
-	char* test = (char*) malloc(sizeof(char*)*128);
-	char* output = (char*) malloc(sizeof(char*)*128);
-	char* temp = (char*) malloc(sizeof(char*)*1024);
-	char* base = (char*) malloc(sizeof(char*)*128);
+#ifndef MAX_BUF
+#define MAX_BUF 1024
+#endif
+
+int parseInput(char* pathname) 
+{
+	if (chdir(pathname))
+	{
+		perror(pathname);
+		return 1;
+	}
+
+	int i = 0;
+	int pos = 0;
+	while (pathname[i] != '\0')
+	{
+		if (pathname[i] == '/')
+			pos = i;
+		i++;
+	}
+
+	printf("%d:%d\n", i, pos);
+
+	char resultsPath[MAX_BUF];
+	sprintf(resultsPath, "./%.*s.txt", pos, pathname + pos + 1);
+	printf("%s\n", resultsPath);
+	FILE *resultsFile = fopen(resultsPath, "w+");
+
+	FILE *votesFile = fopen("./votes.txt", "r");
+
+	char output[MAX_BUF] = "";
 	int count[256] = {0};
 	int c, ptr;
 
-	strcpy(path,pathname);
-	strcat(path, "/votes.txt");
+	char cwd[MAX_BUF];
+	getcwd(cwd, MAX_BUF);
 
-	f = fopen("./votes", "rb");
+	//printf("cwd: %s\nvotes path: %s\nresults path: %s\n\n", cwd, votesPath, resultsPath);
 
-	if (f != NULL)
+	if (votesFile != NULL && resultsFile != NULL) 
 	{
-		printf("valid\n");
-	}
-
-	if (f != NULL) {
-		while ((c = fgetc(f))) {
-			if (c != EOF && c != '\n' && 
-				((c > 64 && c < 91) || (c > 96 && c < 123))) {
+		while ((c = fgetc(votesFile)) != EOF) 
+			if (c != '\n' && ((c > 64 && c < 91) || (c > 96 && c < 123)))  
 				count[c] += 1;
-				ptr++;
-			} else if (c == EOF) {
-				break;
+
+		fclose(votesFile);
+
+		for (ptr = 0; ptr < 256; ptr++) 
+		{
+			char candCount[MAX_BUF];
+			if (count[ptr] > 0) 
+			{
+				snprintf(candCount, MAX_BUF, "%c:%d,", ptr, count[ptr]);
+				strcat(output, candCount);
 			}
 		}
+
+		// get length of string
+		for (ptr = 0; output[ptr+1] != '\0' || ptr >= MAX_BUF; ptr++);
+		output[ptr] = '\n';
+
+		fputs(output, resultsFile);
+		
+		fclose(resultsFile);
+
+		//printf("%s/%s.txt\n", pathname, pathname);
+
+		return 1;
 	}
 
-	path = pathname;
-	base = basename(path);
+	printf("Not a leaf node.\n");
 
-	snprintf(test, sizeof(test)*4, "%s%s%s", "/", base, ".txt");
-	strcat(path, test);
-
-	f = fopen(path, "w+");
-
-	for (ptr = 0; ptr < 256; ptr++) {
-		if (count[ptr] > 0) {
-			snprintf(output, sizeof(output)*4, "%c:%d,", ptr, count[ptr]);
-			strcat(temp, output);
-		}
-	}
-
-	temp[strlen(temp)-1] = 0;
-
-	fprintf(f, "%s\n", temp);
-	fclose(f);
 	return 0;
 }
 
