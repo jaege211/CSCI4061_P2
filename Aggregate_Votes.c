@@ -127,7 +127,7 @@ int main(int argc, char const *argv[])
 
 	if (chdir(argv[1])) // check if there is an error changing directories
 	{
-		perror(pEntry->d_name);
+		perror("File error");
 		return 1;
 	}
 
@@ -140,12 +140,63 @@ int main(int argc, char const *argv[])
 
 	execOnChildren(pDir, pEntry);
 
-	char cwd[MAX_BUF];
-	getcwd(cwd, MAX_BUF);
-	printf("%s\n", cwd);
-
 	person_t election[MAX_BUF];
+	FILE* childResults;
 
+	char* tokens[MAX_BUF];
+	char* token;
+	char data[MAX_BUF];
+	char c;
+	int i;
+
+	rewinddir(pDir);
+
+	while ((pEntry = readdir(pDir)) != NULL)
+	{
+		if (pEntry->d_type == DT_DIR && strcmp(pEntry->d_name, ".") != 0 && strcmp(pEntry->d_name, "..") != 0)
+		{
+			if (chdir(pEntry->d_name)) {
+				perror("Directory error");
+				return 1;
+			}
+
+			childResults = fopen("votes.txt", "r");
+
+			if (childResults == NULL) {
+				char cwd[MAX_BUF];
+				getcwd(cwd, MAX_BUF);
+				printf("cwd: %s\nchdir: %s", cwd, );
+
+				perror("File error");
+				return 1;
+			}
+
+			// get full line of vote data
+			i = 0;
+			while ((c = fgetc(childResults)) != EOF) {
+				data[i] = c;
+				printf("%s\n", data[i]);
+				i++;
+			}
+
+			// get colon separated data
+			i = 0;
+			tokens[i++] = strtok(data, ",");
+			while ((tokens[i++] = strtok(NULL, ",")) != NULL);
+
+			// get raw candidate data
+			i = 0;
+			while (tokens[i] != NULL) {
+				//printf("%s__%s\n", strtok(tokens[i], ":"), strtok(NULL, ":"));
+				i++;
+			}
+
+			fclose(childResults);
+			chdir("..");
+		}
+	}
+
+/*
 	char str[] = "A:1,B:1,D:4,C:6";
 	char* tok;
 	tok = strtok(str, ",");
@@ -154,6 +205,7 @@ int main(int argc, char const *argv[])
 	while ((tok = strtok(NULL, ",")) != NULL) {
 		printf("%s\n", tok);
 	}
+*/
 
 	closedir(pDir);
 
