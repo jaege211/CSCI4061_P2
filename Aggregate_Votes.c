@@ -1,3 +1,8 @@
+/*login: jaege211, x500_2
+date: 03/09/18
+name: Jason Jaeger, full_name2
+id: 5129479, id_for_second_name*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -7,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include "util.h"
 
 #define MAX_BUF 1024
 #define _BSD_SOURCE
@@ -52,6 +58,18 @@ int findIndexByName(char* name, person_t* election)
 	}
 
 	return -1;
+}
+
+// adds to the vote total of person
+int addToCount(char* name, char* amount, person_t* election)
+{
+	int idx;
+	if (checkInElection(name, election)) idx = findIndexByName(name, election);
+	else idx = addToElection(name, election);
+
+	election[idx].votes += atoi(amount);
+
+	//printf("%s now has %d votes\n", election[idx].name, election[idx].votes);
 }
 
 // check if directory is a leaf
@@ -106,20 +124,12 @@ int main(int argc, char const *argv[])
 		return 1;
 	}
 
-	struct stat stats;
 	struct dirent entry;
 
 	DIR *pDir = opendir(argv[1]);
 	struct dirent *pEntry = &entry;
-	struct stat *pStats = &stats;
 
 	if (pDir== NULL) // check if there is an error opening the directory
-	{
-		perror(argv[1]);
-		return 1;
-	}
-
-	if (stat(argv[1], pStats) == -1) // check if there is an error opening stats
 	{
 		perror(argv[1]);
 		return 1;
@@ -141,53 +151,54 @@ int main(int argc, char const *argv[])
 	execOnChildren(pDir, pEntry);
 
 	person_t election[MAX_BUF];
-	FILE* childResults;
 
-	char* tokens[MAX_BUF];
-	char* token;
-	char data[MAX_BUF];
-	char c;
+	FILE* childResults;
+	char childResultsFileName[MAX_BUF];
+
+	FILE* parentResults;
+	char parentResultsFileName[MAX_BUF];
+
 	int i;
+	int j;
+	char rawdata[MAX_BUF];
+	char*** commaSeparated = (char***) malloc(sizeof(char) * MAX_BUF * MAX_BUF);
+	char*** colonSeparated = (char***) malloc(sizeof(char) * MAX_BUF * MAX_BUF);
 
 	rewinddir(pDir);
 
+	// parese results file of all child directories
 	while ((pEntry = readdir(pDir)) != NULL)
 	{
 		if (pEntry->d_type == DT_DIR && strcmp(pEntry->d_name, ".") != 0 && strcmp(pEntry->d_name, "..") != 0)
 		{
-			if (chdir(pEntry->d_name)) {
+			if (chdir(pEntry->d_name)) 
+			{
 				perror("Directory error");
 				return 1;
 			}
 
-			childResults = fopen("votes.txt", "r");
+			sprintf(childResultsFileName, "%s.txt", pEntry->d_name);
+			childResults = fopen(childResultsFileName, "r");
 
-			if (childResults == NULL) {
-				char cwd[MAX_BUF];
-				getcwd(cwd, MAX_BUF);
-				printf("cwd: %s\nchdir: %s", cwd, );
-
+			if (childResults == NULL) 
+			{
 				perror("File error");
 				return 1;
 			}
 
-			// get full line of vote data
-			i = 0;
-			while ((c = fgetc(childResults)) != EOF) {
-				data[i] = c;
-				printf("%s\n", data[i]);
-				i++;
-			}
+			// get line of text
+			fgets(rawdata, sizeof(rawdata), childResults);
+			
+			// separate it by commas
+			makeargv(rawdata, ",", commaSeparated);
 
-			// get colon separated data
+			// get data form commas
 			i = 0;
-			tokens[i++] = strtok(data, ",");
-			while ((tokens[i++] = strtok(NULL, ",")) != NULL);
+			while (commaSeparated[0][i] != NULL) {
+				makeargv(commaSeparated[0][i], ":", colonSeparated);
 
-			// get raw candidate data
-			i = 0;
-			while (tokens[i] != NULL) {
-				//printf("%s__%s\n", strtok(tokens[i], ":"), strtok(NULL, ":"));
+				addToCount(colonSeparated[0][0], colonSeparated[0][1], election);
+
 				i++;
 			}
 
@@ -196,18 +207,44 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-/*
-	char str[] = "A:1,B:1,D:4,C:6";
-	char* tok;
-	tok = strtok(str, ",");
-	printf("%s\n", tok);
+	// make output file for directory
 
-	while ((tok = strtok(NULL, ",")) != NULL) {
-		printf("%s\n", tok);
+	char cwd[MAX_BUF];
+	getcwd(cwd, MAX_BUF);
+
+	i = 0;
+	j = 0;
+	while (cwd[i] != '\0') {
+		if (cwd[i] == '/')
+			j = i;
+		i++;
 	}
-*/
 
-	closedir(pDir);
+	sprintf(parentResultsFileName, "%.*s.txt", j, cwd + j + 1);
+	parentResults = fopen(parentResultsFileName, "w+");
+
+	if (parentResults == NULL)
+	{
+		perror("File Error");
+		return 1;
+	}
+
+	i = 0;
+
+	while (election[i].name != NULL)
+	{
+		fprintf(parentResults, "%s:%d", election[i].name, election[i].votes);
+		if (election[i+1].name != NULL)
+			fputc(',', parentResults);
+
+		i++;
+	} 
+
+	fputc('\n', parentResults);
+	fclose(parentResults);
+
+	free(commaSeparated);
+	free(colonSeparated);
 
 	return 0;
 }

@@ -2,7 +2,9 @@ CC = gcc
 DBFLAGS = -g
 BINARIES = Leaf_Counter Aggregate_Votes Vote_Counter
 
-Vote_Counter: Leaf_Counter Aggregate_Votes
+make: Vote_Counter Aggregate_Votes Leaf_Counter
+
+Vote_Counter: 
 	$(CC) -o Vote_Counter Vote_Counter.c
 
 Aggregate_Votes:

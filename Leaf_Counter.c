@@ -1,3 +1,8 @@
+/*login: jaege211, x500_2
+date: 03/09/18
+name: Jason Jaeger, full_name2
+id: 5129479, id_for_second_name*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -8,47 +13,29 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
 #include "util.h"
 
-#ifndef MAX_BUF
 #define MAX_BUF 1024
-#endif
 
-typedef struct string {
-	char s[MAX_BUF];
+typedef struct person {
+	char s[1024];
 	int count;
-} string;
+} person_t;
 
-void removeChar(char *str, int ptr) {
-	while (str[ptr]) {
-		ptr++;
-		str[ptr-1] = str[ptr];
-	}
-	str[ptr] = 0;
-}
-
-int isChar(char c) {
-	if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-void removeNonChar(char *str) {
+void removeSpaces(char *s) {
 	int ptr;
-	for (ptr = 0; str[ptr]; ptr++) {
-		if (!isChar(str[ptr])) {
-			removeChar(str, ptr);
-		}
+	for (ptr = 0; s[ptr]; ptr++) {
+		if (s[ptr] == ' ') s[ptr] = '_';
 	}
+	trimwhitespace(s);
 }
 
-void addString(string *strings, char *s, int *n) {
+void addString(person_t *strings, char *s, int *n) {
 	int ptr;
 	for (ptr = 0; ptr < *n; ptr++) {
 		if (strcmp(s, strings[ptr].s) == 0) {
-			strings[ptr].count += 1;
+			strings[ptr].count++;
 			return;
 		}
 	}
@@ -58,8 +45,10 @@ void addString(string *strings, char *s, int *n) {
 	(*n) += 1;
 }
 
-int parseInput(char* pathname) {
-	if (chdir(pathname)) {
+int parseInput(char* pathname) 
+{
+	if (chdir(pathname))
+	{
 		perror(pathname);
 		return 1;
 	}
@@ -74,27 +63,29 @@ int parseInput(char* pathname) {
 				pos = i;
 			i++;
 		}
-		sprintf(resultsPath, "./%.*s.txt", pos, pathname + pos + 1);
+		sprintf(resultsPath, "%.*s.txt", pos, pathname + pos + 1);
 	} else {
-		sprintf(resultsPath, "./%s.txt", pathname);
+		sprintf(resultsPath, "%s.txt", pathname);
 	}
 
 	FILE *resultsFile = fopen(resultsPath, "w+");
-	FILE *votesFile = fopen("./votes.txt", "r");
+	FILE *votesFile = fopen("votes.txt", "r");
 
 	char output[MAX_BUF] = "";
+	int count[256] = {0};
 	int c, ptr;
-	char line[20][MAX_BUF];
-	string strings[MAX_BUF];
-
+	char line[MAX_BUF][MAX_BUF];
+	person_t strings[MAX_BUF];
 	char cwd[MAX_BUF];
 	getcwd(cwd, MAX_BUF);
 
-	c = ptr = 0;
+	c = 0;
+	ptr = 0;
 	if (votesFile != NULL && resultsFile != NULL) {
+
 		while (fgets(line[ptr], MAX_BUF, votesFile)) {
 			line[ptr][strlen(line[ptr])-1] = '\0';
-			removeNonChar(line[ptr]);
+			removeSpaces(line[ptr]);
 			addString(strings, line[ptr], &c);
 			ptr++;
 		}
@@ -104,7 +95,7 @@ int parseInput(char* pathname) {
 		for (ptr = 0; ptr < 256; ptr++) {
 			char candCount[MAX_BUF];
 			if (strings[ptr].count > 0) {
-				snprintf(candCount, MAX_BUF, "%s:%d,", strings[ptr].s, strings[ptr].count);
+				sprintf(candCount, "%s:%d,", strings[ptr].s, strings[ptr].count);
 				strcat(output, candCount);
 			}
 		}
@@ -114,10 +105,16 @@ int parseInput(char* pathname) {
 		output[ptr] = '\n';
 		fputs(output, resultsFile);
 		fclose(resultsFile);
+
+		char cwd[MAX_BUF];
+		getcwd(cwd, MAX_BUF);
+		printf("%s/%s\n", cwd, resultsPath);
+
 		return 1;
 	}
 
 	printf("Not a leaf node.\n");
+
 	return 0;
 }
 

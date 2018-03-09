@@ -1,12 +1,21 @@
+/*login: jaege211, x500_2
+date: 03/09/18
+name: Jason Jaeger, full_name2
+id: 5129479, id_for_second_name*/
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 /* The maximum amount of bytes for a file name */
 #define MAX_FILE_NAME_SIZE 255
 
 /* The maximum amount of bytes for each I/O operation */
 #define MAX_IO_BUFFER_SIZE 1024
+
+/* Make sure running on system that supports directory type calls */
+#define _BSD_SOURCE
 
 /**********************************
 * 
