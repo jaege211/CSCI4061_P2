@@ -1,7 +1,7 @@
-//*login: jaege211, x500_2
+/*login: jaege211, x500_2
 date: 03/09/18
 name: Jason Jaeger, full_name2
-id: 5129479, id_for_second_name*//
+id: 5129479, id_for_second_name*/
 
 # CSCI4061_P2
 Second Project
