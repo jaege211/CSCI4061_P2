@@ -15,30 +15,31 @@
 #endif
 
 typedef struct string {
-	char s[1024];
+	char s[MAX_BUF];
 	int count;
 } string;
 
-void removeChar(char *s, int ptr) {
-	while (s[ptr]) {
+void removeChar(char *str, int ptr) {
+	while (str[ptr]) {
 		ptr++;
-		s[ptr-1] = s[ptr];
+		str[ptr-1] = str[ptr];
 	}
-	s[ptr] = 0;
+	str[ptr] = 0;
 }
 
 int isChar(char c) {
 	if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) {
 		return 1;
+	} else {
+		return 0;
 	}
-	return 0;
 }
 
-void removeNonChar(char *s) {
+void removeNonChar(char *str) {
 	int ptr;
-	for (ptr = 0; s[ptr]; ptr++) {
-		if (!isChar(s[ptr])) {
-			removeChar(s, ptr);
+	for (ptr = 0; str[ptr]; ptr++) {
+		if (!isChar(str[ptr])) {
+			removeChar(str, ptr);
 		}
 	}
 }
@@ -47,7 +48,7 @@ void addString(string *strings, char *s, int *n) {
 	int ptr;
 	for (ptr = 0; ptr < *n; ptr++) {
 		if (strcmp(s, strings[ptr].s) == 0) {
-			strings[ptr].count++;
+			strings[ptr].count += 1;
 			return;
 		}
 	}
@@ -57,10 +58,8 @@ void addString(string *strings, char *s, int *n) {
 	(*n) += 1;
 }
 
-int parseInput(char* pathname) 
-{
-	if (chdir(pathname))
-	{
+int parseInput(char* pathname) {
+	if (chdir(pathname)) {
 		perror(pathname);
 		return 1;
 	}
@@ -80,24 +79,19 @@ int parseInput(char* pathname)
 		sprintf(resultsPath, "./%s.txt", pathname);
 	}
 
-	//printf("%d:%d\n", i, pos);
-	//printf("%s\n", resultsPath);
 	FILE *resultsFile = fopen(resultsPath, "w+");
 	FILE *votesFile = fopen("./votes.txt", "r");
 
 	char output[MAX_BUF] = "";
-	int count[256] = {0};
 	int c, ptr;
-	char line[10][MAX_BUF];
+	char line[20][MAX_BUF];
 	string strings[MAX_BUF];
+
 	char cwd[MAX_BUF];
 	getcwd(cwd, MAX_BUF);
 
-	//printf("cwd: %s\nvotes path: %s\nresults path: %s\n\n", cwd, votesPath, resultsPath);
-
 	c = ptr = 0;
 	if (votesFile != NULL && resultsFile != NULL) {
-
 		while (fgets(line[ptr], MAX_BUF, votesFile)) {
 			line[ptr][strlen(line[ptr])-1] = '\0';
 			removeNonChar(line[ptr]);
@@ -124,7 +118,6 @@ int parseInput(char* pathname)
 	}
 
 	printf("Not a leaf node.\n");
-
 	return 0;
 }
 
